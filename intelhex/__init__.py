@@ -129,12 +129,12 @@ class IntelHex(object):
         addr = bin[1]*256 + bin[2]
 
         record_type = bin[3]
-        if not (0 <= record_type <= 10):
+        if not (0 <= record_type <= 16):
             raise RecordTypeError(line=line)
 
         crc = sum(bin)
         crc &= 0x0FF
-        if crc != 0 and record_type != 10:
+        if crc != 0 and record_type != 16:
             #ignoring checksum error for 0x10 Record Type
             raise RecordChecksumError(line=line)
 
@@ -191,7 +191,7 @@ class IntelHex(object):
         #Adding support BMW 0da/0pa files (record_type 0x10) 
         #Example :10 D7F0 10 FFFFFFFFFFFFFFFFD765115A5A5A5A5A 12 - This is data record at the end of the data block, before Extended Linear Address Record
         
-        elif record_type == 10:
+        elif record_type == 16:
         # data record BMW 0da/0pa 
             addr += self._offset
             for i in range_g(4, 4+record_length):
