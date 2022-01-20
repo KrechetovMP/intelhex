@@ -129,12 +129,13 @@ class IntelHex(object):
         addr = bin[1]*256 + bin[2]
 
         record_type = bin[3]
-        if not (0 <= record_type <= 5):
+        if not (0 <= record_type <= 10):
             raise RecordTypeError(line=line)
 
         crc = sum(bin)
         crc &= 0x0FF
-        if crc != 0:
+        if crc != 0 and record_type != 10:
+            #ignoring checksum error for 0x10 Record Type
             raise RecordChecksumError(line=line)
 
         if record_type == 0:
@@ -147,7 +148,7 @@ class IntelHex(object):
                 addr += 1   # FIXME: addr should be wrapped 
                             # BUT after 02 record (at 64K boundary)
                             # and after 04 record (at 4G boundary)
-
+                
         elif record_type == 1:
             # end of file record
             if record_length != 0:
@@ -187,7 +188,18 @@ class IntelHex(object):
                                        bin[6]*256 +
                                        bin[7]),
                               }
-
+        #Adding support BMW 0da/0pa files (record_type 0x10) 
+        #Example :10 D7F0 10 FFFFFFFFFFFFFFFFD765115A5A5A5A5A 12 - This is data record at the end of the data block, before Extended Linear Address Record
+        
+        elif record_type == 10:
+        # data record BMW 0da/0pa 
+            addr += self._offset
+            for i in range_g(4, 4+record_length):
+                if not self._buf.get(addr, None) is None:
+                    raise AddressOverlapError(address=addr, line=line)
+                self._buf[addr] = bin[i]
+                addr += 1 
+                
     def loadhex(self, fobj):
         """Load hex file into internal buffer. This is not necessary
         if object was initialized with source set. This will overwrite
